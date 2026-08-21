@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patron de Boîte</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap');
+  :root {
+    --bg:#F5F0E8; --ink:#1A1612; --accent:#C84B2F; --muted:#8A7F72;
+    --panel:#EDE8DC; --border:#C8BFB0; --fold:#4A90D9; --cut:#C84B2F; --tab:#2A8C5A;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'DM Mono',monospace; background:var(--bg); color:var(--ink); min-height:100vh; padding:2rem; }
+  .app { max-width:960px; margin:0 auto; }
+  header { margin-bottom:2.5rem; border-bottom:2px solid var(--ink); padding-bottom:1.2rem; display:flex; align-items:baseline; gap:1.2rem; }
+  header h1 { font-family:'Fraunces',serif; font-weight:600; font-size:2rem; letter-spacing:-0.02em; }
+  header span { font-size:0.75rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:1rem; margin-bottom:2rem; }
+  .field { display:flex; flex-direction:column; gap:0.4rem; }
+  label { font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
+  input[type="number"] { font-family:'DM Mono',monospace; font-size:1.1rem; padding:0.6rem 0.8rem; background:white; border:1.5px solid var(--border); border-radius:4px; color:var(--ink); width:100%; transition:border-color .15s; }
+  input[type="number"]:focus { outline:none; border-color:var(--accent); }
+  .unit { font-size:0.65rem; color:var(--muted); margin-top:-0.2rem; }
+  .faces-title { font-family:'Fraunces',serif; font-size:1.1rem; font-weight:300; font-style:italic; margin-bottom:1rem; color:var(--muted); }
+  .faces-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.8rem; margin-bottom:2rem; }
+  .face-card { background:var(--panel); border:1.5px solid var(--border); border-radius:6px; overflow:hidden; }
+  .face-header { padding:0.5rem 0.8rem; background:var(--ink); color:var(--bg); font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
+  .face-body { padding:0.7rem; display:flex; flex-direction:column; gap:0.6rem; }
+  .face-preview { width:100%; aspect-ratio:1; background:white; border:1.5px dashed var(--border); border-radius:4px; display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; position:relative; transition:border-color .15s; }
+  .face-preview:hover { border-color:var(--accent); }
+  .face-preview img { position:absolute; top:0; left:0; width:100%; height:100%; }
+  .face-preview.mode-cover   img { object-fit:cover; }
+  .face-preview.mode-contain img { object-fit:contain; }
+  .face-preview.mode-stretch img { object-fit:fill; }
+  .upload-hint { display:flex; flex-direction:column; align-items:center; gap:0.3rem; color:var(--muted); }
+  .upload-hint svg { opacity:0.4; }
+  .upload-hint span { font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; }
+  .hidden-input { display:none; }
+  .face-fit { display:flex; gap:0.3rem; }
+  .fit-btn { flex:1; font-family:'DM Mono',monospace; font-size:0.58rem; letter-spacing:0.06em; text-transform:uppercase; padding:0.25rem 0; background:white; border:1.5px solid var(--border); border-radius:3px; cursor:pointer; transition:all .12s; color:var(--muted); }
+  .fit-btn:hover { border-color:var(--ink); color:var(--ink); }
+  .fit-btn.active { background:var(--ink); border-color:var(--ink); color:var(--bg); }
+  .remove-btn { background:none; border:none; cursor:pointer; color:var(--bg); opacity:0.6; font-size:0.9rem; line-height:1; padding:0; transition:opacity .12s; }
+  .remove-btn:hover { opacity:1; }
+  .options-row { display:flex; gap:1.5rem; margin-bottom:2rem; flex-wrap:wrap; }
+  .checkbox-field { display:flex; align-items:center; gap:0.5rem; cursor:pointer; font-size:0.75rem; letter-spacing:0.05em; color:var(--ink); }
+  .checkbox-field input { accent-color:var(--accent); width:14px; height:14px; cursor:pointer; }
+  .btn-generate { font-family:'DM Mono',monospace; font-size:0.8rem; letter-spacing:0.12em; text-transform:uppercase; padding:0.9rem 2.5rem; background:var(--accent); color:white; border:none; border-radius:4px; cursor:pointer; transition:opacity .15s,transform .1s; margin-bottom:2.5rem; }
+  .btn-generate:hover { opacity:0.88; }
+  .btn-generate:active { transform:scale(0.98); }
+  #preview-area { display:none; margin-top:1rem; }
+  .preview-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.8rem; border-bottom:1.5px solid var(--border); }
+  .preview-header h2 { font-family:'Fraunces',serif; font-weight:300; font-style:italic; font-size:1.2rem; }
+  .btn-pdf { font-family:'DM Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; padding:0.5rem 1.2rem; background:white; color:var(--ink); border:1.5px solid var(--ink); border-radius:4px; cursor:pointer; transition:all .15s; }
+  .btn-pdf:hover { background:var(--ink); color:var(--bg); }
+  #canvas-container { background:white; border:1.5px solid var(--border); border-radius:6px; overflow:auto; padding:1.5rem; display:flex; justify-content:center; }
+  #patron-canvas { display:block; max-width:100%; }
+  .legend { display:flex; gap:2rem; margin-top:1rem; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:0.5rem; font-size:0.65rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+  .legend-line { width:28px; height:2px; }
+  .legend-line.fold { background:repeating-linear-gradient(90deg,#999 0,#999 5px,transparent 5px,transparent 9px); }
+  .legend-line.cut { background:#999; }
+  .legend-line.tab-glue { background:var(--tab); }
+  .legend-line.tab-free { background:repeating-linear-gradient(90deg,var(--tab) 0,var(--tab) 4px,transparent 4px,transparent 8px); }
+  @media print {
+    body { background:white; padding:0; }
+    header,.form-grid,.faces-title,.faces-grid,.options-row,.btn-generate,.preview-header .btn-pdf,.legend { display:none !important; }
+    #preview-area { display:block !important; margin:0; }
+    #canvas-container { border:none; padding:0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Patron de Boîte</h1>
+    <span>Générateur de patron — usage personnel</span>
+  </header>
+
+  <div class="form-grid">
+    <div class="field">
+      <label>Largeur</label>
+      <input type="number" id="dim-l" value="58" min="5" max="500" step="1">
+      <span class="unit">mm</span>
+    </div>
+    <div class="field">
+      <label>Hauteur</label>
+      <input type="number" id="dim-h" value="90" min="5" max="500" step="1">
+      <span class="unit">mm</span>
+    </div>
+    <div class="field">
+      <label>Profondeur</label>
+      <input type="number" id="dim-p" value="17" min="5" max="500" step="1">
+      <span class="unit">mm</span>
+    </div>
+    <div class="field">
+      <label>Largeur languette</label>
+      <input type="number" id="dim-t" value="10" min="3" max="50" step="1">
+      <span class="unit">mm</span>
+    </div>
+  </div>
+
+  <p class="faces-title">Images par face</p>
+  <div class="faces-grid" id="faces-grid"></div>
+
+  <div class="options-row">
+    <label class="checkbox-field"><input type="checkbox" id="opt-folds" checked> Repères de pliage</label>
+    <label class="checkbox-field"><input type="checkbox" id="opt-cuts"  checked> Repères de découpe</label>
+    <label class="checkbox-field"><input type="checkbox" id="opt-tabs"  checked> Languettes</label>
+  </div>
+
+  <button class="btn-generate" onclick="generatePatron()">▶ Générer le patron</button>
+
+  <div id="preview-area">
+    <div class="preview-header">
+      <h2>Aperçu du patron</h2>
+      <button class="btn-pdf" onclick="exportPDF()">⬇ Exporter en PDF</button>
+    </div>
+    <div id="canvas-container"><canvas id="patron-canvas"></canvas></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-line cut"></div> Découpe</div>
+      <div class="legend-item"><div class="legend-line fold"></div> Pliage</div>
+      <div class="legend-item"><div class="legend-line tab-glue"></div> Languette collage</div>
+      <div class="legend-item"><div class="legend-line tab-free"></div> Languette libre</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ── Accesseurs dimensions ────────────────────────────────────────────────────
+const getL = () => parseFloat(document.getElementById('dim-l').value) || 58; // Largeur
+const getH = () => parseFloat(document.getElementById('dim-h').value) || 90; // Hauteur
+const getP = () => parseFloat(document.getElementById('dim-p').value) || 17; // Profondeur
+
+// ── Faces ────────────────────────────────────────────────────────────────────
+const FACES = [
+  { id:'top',    label:'Dessus'  },
+  { id:'bottom', label:'Dessous' },
+  { id:'front',  label:'Avant'   },
+  { id:'back',   label:'Arrière' },
+  { id:'left',   label:'Gauche'  },
+  { id:'right',  label:'Droite'  },
+];
+const state = {};
+FACES.forEach(f => state[f.id] = { img:null, fit:'cover' });
+
+// ── Build UI ─────────────────────────────────────────────────────────────────
+function buildFacesGrid() {
+  const grid = document.getElementById('faces-grid');
+  grid.innerHTML = '';
+  FACES.forEach(face => {
+    const card = document.createElement('div');
+    card.className = 'face-card';
+    card.innerHTML = `
+      <div class="face-header">
+        <span>${face.label}</span>
+        <button class="remove-btn" onclick="removeFace('${face.id}')">✕</button>
+      </div>
+      <div class="face-body">
+        <div class="face-preview mode-cover" id="prev-${face.id}" onclick="triggerUpload('${face.id}')">
+          <div class="upload-hint">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21,15 16,10 5,21"/>
+            </svg>
+            <span>Cliquer pour importer</span>
+          </div>
+        </div>
+        <input type="file" class="hidden-input" id="file-${face.id}" accept="image/*" onchange="loadFaceImage('${face.id}',this)">
+        <div class="face-fit">
+          <button class="fit-btn active" id="fitbtn-cover-${face.id}"   onclick="setFit('${face.id}','cover')">Couper</button>
+          <button class="fit-btn"        id="fitbtn-contain-${face.id}" onclick="setFit('${face.id}','contain')">Ajuster</button>
+          <button class="fit-btn"        id="fitbtn-stretch-${face.id}" onclick="setFit('${face.id}','stretch')">Étirer</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function triggerUpload(id) { document.getElementById('file-'+id).click(); }
+
+function removeFace(id) {
+  state[id].img = null;
+  const prev = document.getElementById('prev-'+id);
+  prev.className = 'face-preview mode-cover';
+  prev.innerHTML = `<div class="upload-hint"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg><span>Cliquer pour importer</span></div>`;
+  document.getElementById('file-'+id).value = '';
+}
+
+function loadFaceImage(id, input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      state[id].img = img;
+      const prev = document.getElementById('prev-'+id);
+      prev.className = 'face-preview mode-' + state[id].fit;
+      prev.innerHTML = `<img src="${e.target.result}">`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function setFit(id, fit) {
+  state[id].fit = fit;
+  ['cover','contain','stretch'].forEach(f =>
+    document.getElementById('fitbtn-'+f+'-'+id).classList.toggle('active', f===fit)
+  );
+  const prev = document.getElementById('prev-'+id);
+  prev.className = 'face-preview mode-' + fit;
+  const img = prev.querySelector('img');
+  if (img) img.style.objectFit = (fit==='stretch') ? 'fill' : fit;
+}
+
+// ── Génération patron ────────────────────────────────────────────────────────
+//
+// Dimensions :
+//   l = Largeur  (face avant : dimension horizontale)
+//   h = Hauteur  (face avant : dimension verticale)
+//   p = Profondeur (épaisseur de la boîte)
+//   T = Largeur languette
+//
+// Mise à plat — les faces DESSUS et DESSOUS ont pour dimensions l × p
+//
+//  rowTT  ┌──────────┐                          ← languette au-dessus DESSUS (l × T)
+//  rowTop ├──────────┤
+//         │  DESSUS  │  (l × p)
+//  rowMid ┼──────────┼──────────────────────────  ← jonction DESSUS / rangée centrale
+//         │ G │ Av │ D │    ARRIÈRE    │ tab▓ │   rangée centrale (hauteur h)
+//  rowBot ┼──────────┼──────────────────────────
+//         │  DESSOUS │  (l × p)
+//  rowBE  ├──────────┤
+//  rowTB  └──────────┘                          ← languette sous DESSOUS (l × T)
+//
+//  + languettes haut/bas de GAUCHE et DROITE (p × T chacune)
+//
+// Colonnes :
+//   colG   = 0              gauche GAUCHE
+//   colA   = p              gauche AVANT / DESSUS / DESSOUS
+//   colD   = p + l          gauche DROITE
+//   colAr  = p + l + p      gauche ARRIÈRE
+//   colTab = p + l + p + l  gauche languette collage ARRIÈRE
+//   colEnd = p + l + p + l + T
+//
+// Lignes :
+//   rowTT  = 0
+//   rowTop = T              haut DESSUS
+//   rowMid = T + p          haut rangée centrale  ← DESSUS a une hauteur de p !
+//   rowBot = T + p + h      haut DESSOUS
+//   rowBE  = T + p + h + p  bas DESSOUS           ← DESSOUS a aussi une hauteur de p !
+//   rowTB  = T + p + h + p + T
+
+const SC = 3.78; // px/mm
+
+function getT() { return parseFloat(document.getElementById('dim-t').value) || 10; }
+
+function generatePatron() {
+  const l = getL(), h = getH(), p = getP(), T = getT();
+  const showFolds = document.getElementById('opt-folds').checked;
+  const showCuts  = document.getElementById('opt-cuts').checked;
+  const showTabs  = document.getElementById('opt-tabs').checked;
+
+  // Colonnes
+  const colG   = 0;
+  const colA   = p;
+  const colD   = p + l;
+  const colAr  = p + l + p;
+  const colTab = p + l + p + l;
+  const colEnd = p + l + p + l + T;
+
+  // Lignes — DESSUS et DESSOUS ont une hauteur = p (Profondeur)
+  const rowTT  = 0;
+  const rowTop = T;
+  const rowMid = T + p;          // ← p, pas l !
+  const rowBot = T + p + h;
+  const rowBE  = T + p + h + p;  // ← p, pas l !
+  const rowTB  = T + p + h + p + T;
+
+  const totalW = colEnd;
+  const totalH = rowTB;
+
+  const canvas = document.getElementById('patron-canvas');
+  canvas.width  = Math.round(totalW * SC);
+  canvas.height = Math.round(totalH * SC);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const px = v => Math.round(v * SC);
+
+  // Faces (x, y, w, h en mm) — top/bottom : largeur=l, hauteur=p
+  const rects = {
+    top:    { x:colA,  y:rowTop, w:l, h:p },
+    left:   { x:colG,  y:rowMid, w:p, h:h },
+    front:  { x:colA,  y:rowMid, w:l, h:h },
+    right:  { x:colD,  y:rowMid, w:p, h:h },
+    back:   { x:colAr, y:rowMid, w:l, h:h },
+    bottom: { x:colA,  y:rowBot, w:l, h:p },
+  };
+
+  // Languettes
+  const tabs = [
+    { id:'tab_top',    x:colA,   y:rowTT,     w:l, h:T, glue:false },
+    { id:'tab_ltop',   x:colG,   y:rowMid-T,  w:p, h:T, glue:false },
+    { id:'tab_lbot',   x:colG,   y:rowBot,    w:p, h:T, glue:false },
+    { id:'tab_rtop',   x:colD,   y:rowMid-T,  w:p, h:T, glue:false },
+    { id:'tab_rbot',   x:colD,   y:rowBot,    w:p, h:T, glue:false },
+    { id:'tab_glue',   x:colTab, y:rowMid,    w:T, h:h, glue:true  },
+    { id:'tab_bottom', x:colA,   y:rowBE,     w:l, h:T, glue:false },
+  ];
+
+  // ── Fond blanc ──────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#FFFFFF';
+  Object.values(rects).forEach(r => ctx.fillRect(px(r.x), px(r.y), px(r.w), px(r.h)));
+  if (showTabs) tabs.forEach(t => ctx.fillRect(px(t.x), px(t.y), px(t.w), px(t.h)));
+
+  // ── Images sur les faces ────────────────────────────────────────────────────
+  FACES.forEach(face => {
+    const r = rects[face.id];
+    const s = state[face.id];
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(px(r.x), px(r.y), px(r.w), px(r.h));
+    ctx.clip();
+    if (s.img) {
+      drawFit(ctx, s.img, s.fit, px(r.x), px(r.y), px(r.w), px(r.h));
+    } else {
+      ctx.fillStyle = '#F0EDE6';
+      ctx.fillRect(px(r.x), px(r.y), px(r.w), px(r.h));
+    }
+    ctx.restore();
+  });
+
+  // ── Fond coloré languettes ──────────────────────────────────────────────────
+  if (showTabs) {
+    tabs.forEach(t => {
+      ctx.fillStyle = t.glue ? 'rgba(42,140,90,0.18)' : 'rgba(42,140,90,0.06)';
+      ctx.fillRect(px(t.x), px(t.y), px(t.w), px(t.h));
+    });
+  }
+
+  // ── Repères de PLIAGE (gris pointillé, 1px physique) ───────────────────────
+  if (showFolds) {
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1 / SC;
+    ctx.setLineDash([4 / SC, 3 / SC]);
+
+    const line = (x1,y1,x2,y2) => {
+      ctx.beginPath(); ctx.moveTo(px(x1),px(y1)); ctx.lineTo(px(x2),px(y2)); ctx.stroke();
+    };
+
+    // Entre faces de la rangée centrale (verticaux)
+    line(colA,  rowMid, colA,  rowBot); // GAUCHE | AVANT
+    line(colD,  rowMid, colD,  rowBot); // AVANT  | DROITE
+    line(colAr, rowMid, colAr, rowBot); // DROITE | ARRIÈRE
+
+    // DESSUS ↔ rangée centrale et DESSOUS ↔ rangée centrale
+    line(colA, rowMid, colA+l, rowMid);
+    line(colA, rowBot, colA+l, rowBot);
+
+    if (showTabs) {
+      line(colA, rowTop, colA+l, rowTop);      // DESSUS ↔ tab_top
+      line(colA, rowBE,  colA+l, rowBE);       // DESSOUS ↔ tab_bottom
+      line(colG, rowMid, colA,   rowMid);      // GAUCHE ↔ tab_ltop
+      line(colG, rowBot, colA,   rowBot);      // GAUCHE ↔ tab_lbot
+      line(colD, rowMid, colD+p, rowMid);      // DROITE ↔ tab_rtop
+      line(colD, rowBot, colD+p, rowBot);      // DROITE ↔ tab_rbot
+      line(colTab, rowMid, colTab, rowBot);    // ARRIÈRE ↔ tab_glue
+    }
+
+    ctx.setLineDash([]);
+  }
+
+  // ── Repères de DÉCOUPE (gris plein, 1px physique) ───────────────────────────
+  // Contour extérieur exact. Schéma avec languettes (T = largeur languette) :
+  //
+  //  colA   colA+l colD+p        colAr+l colEnd
+  //   |        |     |              |      |
+  //   +--------+     |              |      |   rowTT   (languette tab_top)
+  //   +--------+     |              |      |   rowTop  (haut DESSUS)
+  //   |  DESSUS|     |              |      |
+  //   |        +-----+              |      |   rowMid-T (haut tab_ltop/tab_rtop)
+  //   +-+------+--+--+--------+-----+      |   rowMid
+  //   |G| AVANT|Dr|  ARRIÈRE  |  tab▓|     |
+  //   +-+------+--+--+--------+-----+      |   rowBot
+  //   |        +-----+              |      |   rowBot+T (bas tab_lbot/tab_rbot)
+  //   |  DESSOUS|    |              |      |
+  //   +--------+     |              |      |   rowBE
+  //   +--------+     |              |      |   rowTB   (languette tab_bottom)
+  //
+  // Note : pas de tab à droite de DESSUS, pas de tab au-dessus de AVANT ni ARRIÈRE
+
+  if (showCuts) {
+    ctx.strokeStyle = '#aaa';
+    ctx.lineWidth = 1 / SC;
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    if (showTabs) {
+      // Parcours horaire depuis coin haut-gauche de tab_top
+      ctx.moveTo(px(colA),    px(rowTT));    // haut-gauche tab_top
+      ctx.lineTo(px(colA+l),  px(rowTT));    // haut-droite tab_top
+      ctx.lineTo(px(colA+l),  px(rowTop));   // coin haut-droit DESSUS
+      ctx.lineTo(px(colD+p),  px(rowTop));   // longe le haut de DESSUS vers la droite (pas de tab ici)
+      ctx.lineTo(px(colD+p),  px(rowMid-T)); // descend : haut tab_rtop
+      ctx.lineTo(px(colAr+l), px(rowMid-T)); // longe vers la droite (pas de tab au-dessus ARRIÈRE)
+      ctx.lineTo(px(colAr+l), px(rowMid));   // descend : coin haut-droit ARRIÈRE
+      ctx.lineTo(px(colEnd),  px(rowMid));   // tab_glue : côté haut
+      ctx.lineTo(px(colEnd),  px(rowBot));   // tab_glue : côté droit
+      ctx.lineTo(px(colAr+l), px(rowBot));   // coin bas-droit ARRIÈRE
+      ctx.lineTo(px(colD+p),  px(rowBot));   // longe le bas (pas de tab sous ARRIÈRE)
+      ctx.lineTo(px(colD+p),  px(rowBot+T)); // descend : bas tab_rbot
+      ctx.lineTo(px(colA+l),  px(rowBot+T)); // longe vers la gauche (pas de tab sous AVANT)
+      ctx.lineTo(px(colA+l),  px(rowBE));    // remonte : coin bas-droit DESSOUS
+      ctx.lineTo(px(colA+l),  px(rowTB));    // descend : bas-droit tab_bottom
+      ctx.lineTo(px(colA),    px(rowTB));    // bas-gauche tab_bottom
+      ctx.lineTo(px(colA),    px(rowBE));    // remonte : coin bas-gauche DESSOUS
+      ctx.lineTo(px(colA),    px(rowBot+T)); // descend à gauche : bas tab_lbot
+      ctx.lineTo(px(colG),    px(rowBot+T)); // gauche tab_lbot
+      ctx.lineTo(px(colG),    px(rowBot));   // remonte : coin bas-gauche GAUCHE
+      ctx.lineTo(px(colG),    px(rowMid));   // côté gauche du patron (pas de tab à gauche)
+      ctx.lineTo(px(colG),    px(rowMid-T)); // monte : haut tab_ltop
+      ctx.lineTo(px(colA),    px(rowMid-T)); // longe vers la droite (pas de tab au-dessus AVANT)
+      ctx.lineTo(px(colA),    px(rowTop));   // remonte : coin haut-gauche DESSUS
+      ctx.lineTo(px(colA),    px(rowTT));    // retour départ
+    } else {
+      ctx.moveTo(px(colA),    px(rowTop));
+      ctx.lineTo(px(colA+l),  px(rowTop));
+      ctx.lineTo(px(colA+l),  px(rowMid));
+      ctx.lineTo(px(colAr+l), px(rowMid));
+      ctx.lineTo(px(colAr+l), px(rowBot));
+      ctx.lineTo(px(colA+l),  px(rowBot));
+      ctx.lineTo(px(colA+l),  px(rowBE));
+      ctx.lineTo(px(colA),    px(rowBE));
+      ctx.lineTo(px(colA),    px(rowBot));
+      ctx.lineTo(px(colG),    px(rowBot));
+      ctx.lineTo(px(colG),    px(rowMid));
+      ctx.lineTo(px(colA),    px(rowMid));
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  document.getElementById('preview-area').style.display = 'block';
+  document.getElementById('preview-area').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+// ── Rendu image selon mode ───────────────────────────────────────────────────
+function drawFit(ctx, img, fit, x, y, w, h) {
+  if (fit === 'stretch') {
+    ctx.drawImage(img, x, y, w, h);
+  } else if (fit === 'contain') {
+    const s = Math.min(w/img.width, h/img.height);
+    const sw = img.width*s, sh = img.height*s;
+    ctx.fillStyle = '#F8F4EE';
+    ctx.fillRect(x, y, w, h);
+    ctx.drawImage(img, x+(w-sw)/2, y+(h-sh)/2, sw, sh);
+  } else { // cover
+    const s = Math.max(w/img.width, h/img.height);
+    const sw = img.width*s, sh = img.height*s;
+    ctx.drawImage(img, x+(w-sw)/2, y+(h-sh)/2, sw, sh);
+  }
+}
+
+// ── Export PDF ───────────────────────────────────────────────────────────────
+function exportPDF() {
+  const canvas = document.getElementById('patron-canvas');
+  if (!canvas) return;
+  const { jsPDF } = window.jspdf;
+  const l = getL(), h = getH(), p = getP(), T = getT();
+  const totalW = p + l + p + l + T;
+  const totalH = T + p + h + p + T;
+  const margin = 10;
+  const pageW = totalW + margin*2, pageH = totalH + margin*2;
+  const pdf = new jsPDF({ orientation: pageW>pageH?'landscape':'portrait', unit:'mm', format:[pageW,pageH] });
+  pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, totalW, totalH);
+  pdf.setProperties({ title:`Patron boîte ${l}×${h}×${p}mm` });
+  pdf.save(`patron-boite-${l}x${h}x${p}.pdf`);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+buildFacesGrid();
+</script>
+</body>
+</html>
