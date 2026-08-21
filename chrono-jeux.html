@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Chrono Jeux de Société</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-card: #1a1d24;
+    --bg-card-active: #232838;
+    --border: #2a2e38;
+    --text: #f0f1f3;
+    --text-dim: #8a8f9a;
+    --accent: #4f8cff;
+    --accent-dim: #2c4570;
+    --danger: #ff4d4d;
+    --warn: #ffb020;
+    --ok: #3ddc84;
+    --paused: #888;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overscroll-behavior: none;
+    user-select: none;
+  }
+
+  #app {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .screen {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+  }
+  .screen.active { display: flex; }
+
+  /* ---------- SCROLL CONTAINERS ---------- */
+  .scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .topbar h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    font-weight: 600;
+  }
+  .topbar .sub {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ---------- BUTTONS ---------- */
+  button {
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    color: var(--text);
+  }
+  .btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+  }
+  .btn:active { background: var(--bg-card-active); }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .btn-primary:active { background: #3d72d6; }
+  .btn-danger {
+    background: transparent;
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+
+  .icon-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+  }
+  .icon-btn:active { background: var(--bg-card-active); }
+
+  /* ---------- SECTION / CARD ---------- */
+  .section {
+    margin-bottom: 22px;
+  }
+  .section-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  /* ---------- MODE SELECT ---------- */
+  .mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mode-option {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mode-option.selected {
+    border-color: var(--accent);
+    background: var(--bg-card-active);
+  }
+  .mode-option .title { font-weight: 700; font-size: 1rem; }
+  .mode-option .desc { font-size: 0.82rem; color: var(--text-dim); }
+
+  /* ---------- TIME INPUTS ---------- */
+  .time-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+  }
+  .time-field label { font-size: 0.95rem; }
+  .time-stepper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .time-stepper button {
+    background: var(--bg-card-active);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+  .time-value {
+    min-width: 64px;
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- PLAYERS LIST (CONFIG) ---------- */
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .player-row input[type="text"] {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--text);
+    font-size: 1rem;
+  }
+  .player-row input[type="text"]:focus { outline: 1px solid var(--accent); }
+  .player-row .remove-btn {
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 1.3rem;
+    width: 38px;
+    height: 38px;
+  }
+  .player-count-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+
+  /* ---------- GAME SCREEN ---------- */
+  #gameScreen { background: var(--bg); }
+
+  .global-timer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .global-timer-bar .label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .global-timer-bar .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .players-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .player-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .player-card.active {
+    background: var(--bg-card-active);
+    border-color: var(--accent);
+  }
+  .player-card.active.overtime {
+    border-color: var(--danger);
+    animation: pulse-border 1s infinite;
+  }
+  .player-card.paused-state { opacity: 0.55; }
+
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--danger); }
+    50% { border-color: #7a1f1f; }
+  }
+
+  .player-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .player-name {
+    font-size: 1.05rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-reserve {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .player-time {
+    font-size: 1.6rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    flex-shrink: 0;
+    padding-left: 12px;
+  }
+  .player-card.active .player-time { color: var(--accent); font-size: 1.9rem; }
+  .player-card.active.overtime .player-time { color: var(--danger); }
+  .player-card.active.in-reserve .player-time { color: var(--warn); }
+
+  .next-turn-bar {
+    flex-shrink: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+  }
+  .next-turn-btn {
+    background: var(--accent);
+    border-radius: 18px;
+    padding: 20px;
+    width: 100%;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  .next-turn-btn:active { background: #3d72d6; }
+
+  /* ---------- FLOATING PAUSE BUTTON ---------- */
+  .pause-fab {
+    position: fixed;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    z-index: 50;
+    opacity: 0.85;
+  }
+  .pause-fab:active { background: var(--bg-card-active); }
+
+  .end-fab {
+    position: fixed;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    left: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    z-index: 50;
+    opacity: 0.85;
+  }
+  .end-fab:active { background: var(--bg-card-active); }
+
+  /* ---------- PAUSE OVERLAY ---------- */
+  .pause-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 11, 14, 0.92);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    z-index: 100;
+  }
+  .pause-overlay.active { display: flex; }
+  .pause-overlay .pause-title {
+    font-size: 1.8rem;
+    font-weight: 800;
+  }
+  .pause-overlay .resume-btn {
+    background: var(--accent);
+    border-radius: 18px;
+    padding: 18px 48px;
+    font-size: 1.2rem;
+    font-weight: 800;
+  }
+
+  /* ---------- CONFIRM DIALOG ---------- */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 24px;
+  }
+  .confirm-overlay.active { display: flex; }
+  .confirm-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .confirm-box p { margin: 0 0 18px 0; font-size: 1rem; }
+
+  /* ---------- MISC ---------- */
+  .empty-hint {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+  }
+  .footer-note {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 6px 0 2px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ================= CONFIG SCREEN ================= -->
+  <div class="screen active" id="configScreen">
+    <div class="topbar">
+      <h1>⏱️ Chrono Jeux</h1>
+    </div>
+    <div class="scroll">
+
+      <div class="section">
+        <div class="section-title">Mode de chronométrage</div>
+        <div class="mode-options" id="modeOptions">
+          <button class="mode-option" data-mode="reserve">
+            <span class="title">Réserve totale</span>
+            <span class="desc">Chaque joueur dispose d'un temps total pour toute la partie, géré comme il veut.</span>
+          </button>
+          <button class="mode-option" data-mode="turn">
+            <span class="title">Temps par tour</span>
+            <span class="desc">Un temps fixe à chaque tour, qui se réinitialise au tour suivant.</span>
+          </button>
+          <button class="mode-option" data-mode="hybrid">
+            <span class="title">Hybride</span>
+            <span class="desc">Temps par tour + réserve de secours, utilisée automatiquement en cas de dépassement.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section" id="timeSettingsSection">
+        <div class="section-title">Réglage du temps</div>
+        <div class="card" id="timeSettingsCard">
+          <!-- injected dynamically -->
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Joueurs</div>
+        <div class="card">
+          <div id="playersList"></div>
+          <div class="player-count-controls">
+            <span style="font-size:0.85rem; color:var(--text-dim);" id="playerCountLabel">0 joueurs</span>
+            <div class="btn-row" style="width:auto; gap:8px;">
+              <button class="icon-btn" id="removePlayerBtn">−</button>
+              <button class="icon-btn" id="addPlayerBtn">+</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-note">Les noms et réglages sont mémorisés pour la prochaine partie.</div>
+    </div>
+    <div class="next-turn-bar">
+      <button class="next-turn-btn" id="startGameBtn">Démarrer la partie</button>
+    </div>
+  </div>
+
+  <!-- ================= GAME SCREEN ================= -->
+  <div class="screen" id="gameScreen">
+    <div class="global-timer-bar">
+      <span class="label">Durée totale de la partie</span>
+      <span class="value" id="globalTimerValue">00:00</span>
+    </div>
+    <div class="players-list" id="playersListGame"></div>
+    <div class="next-turn-bar">
+      <button class="next-turn-btn" id="nextTurnBtn">Tour suivant ▶</button>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE OVERLAY ================= -->
+  <div class="pause-overlay" id="pauseOverlay">
+    <div class="pause-title">⏸ En pause</div>
+    <button class="resume-btn" id="resumeBtn">Reprendre</button>
+    <button class="btn btn-danger" id="endGameBtn" style="width:auto; padding:12px 28px;">Terminer la partie</button>
+  </div>
+
+  <!-- pause + end FABs, shown only during game -->
+  <button class="end-fab" id="endFab" style="display:none;">✕</button>
+  <button class="pause-fab" id="pauseFab" style="display:none;">⏸</button>
+
+  <!-- ================= CONFIRM DIALOG ================= -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-box">
+      <p id="confirmText">Es-tu sûr ?</p>
+      <div class="btn-row">
+        <button class="btn" id="confirmCancelBtn">Annuler</button>
+        <button class="btn btn-danger" id="confirmOkBtn">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ====================================================================
+// CHRONO JEUX DE SOCIÉTÉ — app.js
+// ====================================================================
+
+const STORAGE_KEY = 'chronoJeux_v1';
+
+// ---------------------------------------------------------------
+// STATE
+// ---------------------------------------------------------------
+let state = {
+  mode: 'turn',              // 'reserve' | 'turn' | 'hybrid'
+  reserveMinutes: 20,        // used by 'reserve' mode
+  turnSeconds: 60,           // used by 'turn' and 'hybrid' mode
+  hybridReserveMinutes: 10,  // used by 'hybrid' mode
+  playerNames: ['Joueur 1', 'Joueur 2'],
+};
+
+let game = null; // populated when a game starts
+let tickInterval = null;
+
+// ---------------------------------------------------------------
+// PERSISTENCE
+// ---------------------------------------------------------------
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      state = Object.assign(state, saved);
+      if (!Array.isArray(state.playerNames) || state.playerNames.length < 2) {
+        state.playerNames = ['Joueur 1', 'Joueur 2'];
+      }
+    }
+  } catch (e) { /* ignore corrupt storage */ }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      mode: state.mode,
+      reserveMinutes: state.reserveMinutes,
+      turnSeconds: state.turnSeconds,
+      hybridReserveMinutes: state.hybridReserveMinutes,
+      playerNames: state.playerNames,
+    }));
+  } catch (e) { /* storage full or unavailable: fail silently */ }
+}
+
+// ---------------------------------------------------------------
+// UTILS
+// ---------------------------------------------------------------
+function formatTime(totalSeconds, withSign) {
+  const sign = totalSeconds < 0 ? '+' : '';
+  const abs = Math.abs(Math.round(totalSeconds));
+  const m = Math.floor(abs / 60);
+  const s = abs % 60;
+  const str = `${m}:${String(s).padStart(2, '0')}`;
+  return withSign ? sign + str : str;
+}
+
+function formatGlobalTime(totalSeconds) {
+  const abs = Math.round(totalSeconds);
+  const h = Math.floor(abs / 3600);
+  const m = Math.floor((abs % 3600) / 60);
+  const s = abs % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function vibrate(pattern) {
+  if (window.navigator && typeof window.navigator.vibrate === 'function') {
+    window.navigator.vibrate(pattern);
+  }
+}
+
+// Simple beep generated via WebAudio so we don't need an external sound file.
+let audioCtx = null;
+function playAlarm() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const now = audioCtx.currentTime;
+    // three short beeps
+    for (let i = 0; i < 3; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0, now + i * 0.3);
+      gain.gain.linearRampToValueAtTime(0.35, now + i * 0.3 + 0.02);
+      gain.gain.linearRampToValueAtTime(0, now + i * 0.3 + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + i * 0.3);
+      osc.stop(now + i * 0.3 + 0.25);
+    }
+  } catch (e) { /* audio not available, ignore */ }
+  vibrate([200, 100, 200, 100, 200]);
+}
+
+// ---------------------------------------------------------------
+// DOM REFS
+// ---------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+
+const configScreen = $('configScreen');
+const gameScreen = $('gameScreen');
+const modeOptionsEl = $('modeOptions');
+const timeSettingsCard = $('timeSettingsCard');
+const playersListEl = $('playersList');
+const playerCountLabel = $('playerCountLabel');
+const addPlayerBtn = $('addPlayerBtn');
+const removePlayerBtn = $('removePlayerBtn');
+const startGameBtn = $('startGameBtn');
+
+const globalTimerValue = $('globalTimerValue');
+const playersListGame = $('playersListGame');
+const nextTurnBtn = $('nextTurnBtn');
+const pauseFab = $('pauseFab');
+const endFab = $('endFab');
+const pauseOverlay = $('pauseOverlay');
+const resumeBtn = $('resumeBtn');
+const endGameBtn = $('endGameBtn');
+
+const confirmOverlay = $('confirmOverlay');
+const confirmText = $('confirmText');
+const confirmCancelBtn = $('confirmCancelBtn');
+const confirmOkBtn = $('confirmOkBtn');
+
+// ---------------------------------------------------------------
+// CONFIG SCREEN RENDERING
+// ---------------------------------------------------------------
+function renderModeOptions() {
+  const buttons = modeOptionsEl.querySelectorAll('.mode-option');
+  buttons.forEach((btn) => {
+    btn.classList.toggle('selected', btn.dataset.mode === state.mode);
+  });
+}
+
+function renderTimeSettings() {
+  timeSettingsCard.innerHTML = '';
+
+  function stepperRow(labelText, value, unit, onDec, onInc) {
+    const row = document.createElement('div');
+    row.className = 'time-field';
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    const stepper = document.createElement('div');
+    stepper.className = 'time-stepper';
+    const dec = document.createElement('button');
+    dec.textContent = '−';
+    dec.addEventListener('click', onDec);
+    const val = document.createElement('span');
+    val.className = 'time-value';
+    val.textContent = `${value} ${unit}`;
+    const inc = document.createElement('button');
+    inc.textContent = '+';
+    inc.addEventListener('click', onInc);
+    stepper.appendChild(dec);
+    stepper.appendChild(val);
+    stepper.appendChild(inc);
+    row.appendChild(label);
+    row.appendChild(stepper);
+    return row;
+  }
+
+  if (state.mode === 'reserve') {
+    timeSettingsCard.appendChild(stepperRow(
+      'Temps total / joueur', state.reserveMinutes, 'min',
+      () => { state.reserveMinutes = Math.max(1, state.reserveMinutes - 1); renderTimeSettings(); saveSettings(); },
+      () => { state.reserveMinutes = Math.min(180, state.reserveMinutes + 1); renderTimeSettings(); saveSettings(); }
+    ));
+  } else if (state.mode === 'turn') {
+    timeSettingsCard.appendChild(stepperRow(
+      'Temps par tour', state.turnSeconds, 'sec',
+      () => { state.turnSeconds = Math.max(5, state.turnSeconds - 5); renderTimeSettings(); saveSettings(); },
+      () => { state.turnSeconds = Math.min(600, state.turnSeconds + 5); renderTimeSettings(); saveSettings(); }
+    ));
+  } else if (state.mode === 'hybrid') {
+    timeSettingsCard.appendChild(stepperRow(
+      'Temps par tour', state.turnSeconds, 'sec',
+      () => { state.turnSeconds = Math.max(5, state.turnSeconds - 5); renderTimeSettings(); saveSettings(); },
+      () => { state.turnSeconds = Math.min(600, state.turnSeconds + 5); renderTimeSettings(); saveSettings(); }
+    ));
+    const divider = document.createElement('div');
+    divider.style.borderTop = '1px solid var(--border)';
+    divider.style.margin = '4px 0';
+    timeSettingsCard.appendChild(divider);
+    timeSettingsCard.appendChild(stepperRow(
+      'Réserve de secours', state.hybridReserveMinutes, 'min',
+      () => { state.hybridReserveMinutes = Math.max(1, state.hybridReserveMinutes - 1); renderTimeSettings(); saveSettings(); },
+      () => { state.hybridReserveMinutes = Math.min(120, state.hybridReserveMinutes + 1); renderTimeSettings(); saveSettings(); }
+    ));
+  }
+}
+
+function renderPlayersConfig() {
+  playersListEl.innerHTML = '';
+  state.playerNames.forEach((name, idx) => {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = name;
+    input.placeholder = `Joueur ${idx + 1}`;
+    input.maxLength = 20;
+    input.addEventListener('input', (e) => {
+      state.playerNames[idx] = e.target.value;
+      saveSettings();
+    });
+    row.appendChild(input);
+
+    if (state.playerNames.length > 2) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => {
+        state.playerNames.splice(idx, 1);
+        renderPlayersConfig();
+        saveSettings();
+      });
+      row.appendChild(removeBtn);
+    }
+    playersListEl.appendChild(row);
+  });
+  playerCountLabel.textContent = `${state.playerNames.length} joueur${state.playerNames.length > 1 ? 's' : ''}`;
+  removePlayerBtn.disabled = state.playerNames.length <= 2;
+  addPlayerBtn.disabled = state.playerNames.length >= 7;
+  removePlayerBtn.style.opacity = removePlayerBtn.disabled ? 0.4 : 1;
+  addPlayerBtn.style.opacity = addPlayerBtn.disabled ? 0.4 : 1;
+}
+
+modeOptionsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.mode-option');
+  if (!btn) return;
+  state.mode = btn.dataset.mode;
+  renderModeOptions();
+  renderTimeSettings();
+  saveSettings();
+});
+
+addPlayerBtn.addEventListener('click', () => {
+  if (state.playerNames.length >= 7) return;
+  state.playerNames.push(`Joueur ${state.playerNames.length + 1}`);
+  renderPlayersConfig();
+  saveSettings();
+});
+
+removePlayerBtn.addEventListener('click', () => {
+  if (state.playerNames.length <= 2) return;
+  state.playerNames.pop();
+  renderPlayersConfig();
+  saveSettings();
+});
+
+// ---------------------------------------------------------------
+// GAME LOGIC
+// ---------------------------------------------------------------
+function buildGameState() {
+  const names = state.playerNames.map((n, i) => (n && n.trim()) ? n.trim() : `Joueur ${i + 1}`);
+
+  const players = names.map((name) => {
+    const p = {
+      name,
+      paused: false,
+    };
+    if (state.mode === 'reserve') {
+      p.remaining = state.reserveMinutes * 60; // seconds, can go negative
+    } else if (state.mode === 'turn') {
+      p.remaining = state.turnSeconds;
+    } else if (state.mode === 'hybrid') {
+      p.remaining = state.turnSeconds;     // current turn timer
+      p.reserveRemaining = state.hybridReserveMinutes * 60; // backup reserve
+      p.inReserve = false;                 // whether we've fallen into reserve this turn
+    }
+    return p;
+  });
+
+  return {
+    players,
+    activeIndex: 0,
+    globalElapsed: 0,
+    paused: false,
+    lastTick: Date.now(),
+  };
+}
+
+function startGame() {
+  // Warm-up vibration : Chrome Android exige un geste utilisateur récent
+  // pour autoriser l'API Vibration. On envoie une impulsion imperceptible (1 ms)
+  // au moment du tap sur "Démarrer", ce qui débloque l'autorisation pour la session.
+  vibrate([1]);
+
+  game = buildGameState();
+  showScreen('game');
+  pauseFab.style.display = 'flex';
+  endFab.style.display = 'flex';
+  renderGameScreen();
+  startTicking();
+}
+
+function startTicking() {
+  stopTicking();
+  game.lastTick = Date.now();
+  tickInterval = setInterval(tick, 200);
+}
+
+function stopTicking() {
+  if (tickInterval) {
+    clearInterval(tickInterval);
+    tickInterval = null;
+  }
+}
+
+function tick() {
+  if (!game || game.paused) return;
+  const now = Date.now();
+  const delta = (now - game.lastTick) / 1000;
+  game.lastTick = now;
+
+  game.globalElapsed += delta;
+
+  const active = game.players[game.activeIndex];
+  const wasOvertime = isOvertime(active);
+
+  if (state.mode === 'hybrid') {
+    if (!active.inReserve) {
+      active.remaining -= delta;
+      if (active.remaining <= 0 && active.reserveRemaining > 0) {
+        // fall into reserve automatically
+        active.inReserve = true;
+        active.remaining = 0;
+        triggerAlarm();
+      } else if (active.remaining <= 0) {
+        // no reserve left either: keep counting up as overtime on reserve display
+        active.inReserve = true;
+      }
+    } else {
+      active.reserveRemaining -= delta;
+      if (!wasOvertime && isOvertime(active)) {
+        triggerAlarm();
+      }
+    }
+  } else {
+    active.remaining -= delta;
+    if (!wasOvertime && isOvertime(active)) {
+      triggerAlarm();
+    }
+  }
+
+  renderGameScreen();
+  tickAlarm(active);
+}
+
+function isOvertime(player) {
+  if (state.mode === 'hybrid') {
+    if (player.inReserve) return player.reserveRemaining <= 0;
+    return false;
+  }
+  return player.remaining <= 0;
+}
+
+let lastAlarmTime = 0;
+
+// INTERVAL_NORMAL  : répétition toutes les 5 s en dépassement classique
+// INTERVAL_RESERVE : répétition toutes les 30 s en dépassement de réserve hybride
+const ALARM_INTERVAL_NORMAL  = 5_000;
+const ALARM_INTERVAL_RESERVE = 30_000;
+
+function triggerAlarm(isReserveOvertime = false) {
+  const now = Date.now();
+  const debounce = 1_000; // évite les doubles déclenchements au passage de seuil
+  if (now - lastAlarmTime < debounce) return;
+  lastAlarmTime = now;
+  playAlarm();
+}
+
+// Appelé à chaque tick pour décider si on doit ré-alarmer pendant un dépassement continu.
+function tickAlarm(active) {
+  const now = Date.now();
+  let interval = null;
+
+  if (state.mode === 'hybrid') {
+    if (active.inReserve && active.reserveRemaining <= 0) {
+      // Dépassement de réserve : rappel toutes les 5 s
+      interval = ALARM_INTERVAL_NORMAL;
+    } else if (active.inReserve && active.reserveRemaining > 0) {
+      // Dans la réserve (pas encore en dépassement) : rappel toutes les 30 s
+      interval = ALARM_INTERVAL_RESERVE;
+    }
+    // Sinon : dans le temps du tour normal → pas de répétition
+  } else {
+    if (isOvertime(active)) {
+      interval = ALARM_INTERVAL_NORMAL;
+    }
+  }
+
+  if (interval !== null && now - lastAlarmTime >= interval) {
+    lastAlarmTime = now;
+    playAlarm();
+  }
+}
+
+function nextTurn() {
+  if (!game || game.paused) return;
+  const finishing = game.players[game.activeIndex];
+  lastAlarmTime = 0; // réinitialise le compte à rebours d'alarme pour le joueur suivant
+
+  // Reset / carry over time for the player who just finished, per mode rules
+  if (state.mode === 'turn') {
+    finishing.remaining = state.turnSeconds;
+  } else if (state.mode === 'hybrid') {
+    finishing.remaining = state.turnSeconds;
+    finishing.inReserve = false;
+    // reserveRemaining persists across turns (it's the backup pool for the whole game)
+  }
+  // 'reserve' mode: remaining carries over as-is (it's a running total for the game)
+
+  game.activeIndex = (game.activeIndex + 1) % game.players.length;
+  game.lastTick = Date.now();
+  renderGameScreen();
+}
+
+// ---------------------------------------------------------------
+// GAME SCREEN RENDERING
+// ---------------------------------------------------------------
+function renderGameScreen() {
+  if (!game) return;
+
+  globalTimerValue.textContent = formatGlobalTime(game.globalElapsed);
+
+  playersListGame.innerHTML = '';
+  game.players.forEach((p, idx) => {
+    const isActive = idx === game.activeIndex;
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    if (isActive) card.classList.add('active');
+
+    let displaySeconds, overtime, inReserveDisplay = false;
+    if (state.mode === 'hybrid') {
+      if (p.inReserve) {
+        displaySeconds = p.reserveRemaining;
+        overtime = p.reserveRemaining <= 0;
+        inReserveDisplay = true;
+      } else {
+        displaySeconds = p.remaining;
+        overtime = false;
+      }
+    } else {
+      displaySeconds = p.remaining;
+      overtime = p.remaining <= 0;
+    }
+
+    if (isActive && overtime) card.classList.add('overtime');
+    if (isActive && inReserveDisplay && !overtime) card.classList.add('in-reserve');
+
+    const info = document.createElement('div');
+    info.className = 'player-info';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'player-name';
+    nameEl.textContent = p.name;
+    info.appendChild(nameEl);
+
+    if (state.mode === 'hybrid') {
+      const sub = document.createElement('div');
+      sub.className = 'player-reserve';
+      sub.textContent = p.inReserve
+        ? `Réserve en cours`
+        : `Réserve: ${formatTime(p.reserveRemaining, false)}`;
+      info.appendChild(sub);
+    }
+
+    const timeEl = document.createElement('div');
+    timeEl.className = 'player-time';
+    timeEl.textContent = formatTime(displaySeconds, overtime);
+
+    card.appendChild(info);
+    card.appendChild(timeEl);
+    playersListGame.appendChild(card);
+  });
+
+  // auto-scroll active player into view
+  const activeCard = playersListGame.children[game.activeIndex];
+  if (activeCard) {
+    activeCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+}
+
+// ---------------------------------------------------------------
+// PAUSE / RESUME / END
+// ---------------------------------------------------------------
+function pauseGame() {
+  if (!game) return;
+  game.paused = true;
+  pauseOverlay.classList.add('active');
+}
+
+function resumeGame() {
+  if (!game) return;
+  game.paused = false;
+  game.lastTick = Date.now();
+  pauseOverlay.classList.remove('active');
+}
+
+function endGame() {
+  stopTicking();
+  game = null;
+  pauseOverlay.classList.remove('active');
+  pauseFab.style.display = 'none';
+  endFab.style.display = 'none';
+  renderPlayersConfig();
+  showScreen('config');
+}
+
+// ---------------------------------------------------------------
+// CONFIRM DIALOG HELPER
+// ---------------------------------------------------------------
+let pendingConfirmAction = null;
+function showConfirm(message, onConfirm) {
+  confirmText.textContent = message;
+  pendingConfirmAction = onConfirm;
+  confirmOverlay.classList.add('active');
+}
+confirmCancelBtn.addEventListener('click', () => {
+  confirmOverlay.classList.remove('active');
+  pendingConfirmAction = null;
+});
+confirmOkBtn.addEventListener('click', () => {
+  confirmOverlay.classList.remove('active');
+  if (pendingConfirmAction) pendingConfirmAction();
+  pendingConfirmAction = null;
+});
+
+// ---------------------------------------------------------------
+// SCREEN SWITCHING
+// ---------------------------------------------------------------
+function showScreen(name) {
+  configScreen.classList.toggle('active', name === 'config');
+  gameScreen.classList.toggle('active', name === 'game');
+}
+
+// ---------------------------------------------------------------
+// EVENT WIRING
+// ---------------------------------------------------------------
+startGameBtn.addEventListener('click', startGame);
+
+// Prevent the next-turn button from being double-tapped too fast.
+let nextTurnLock = false;
+nextTurnBtn.addEventListener('click', () => {
+  if (nextTurnLock) return;
+  nextTurnLock = true;
+  setTimeout(() => { nextTurnLock = false; }, 250);
+  nextTurn();
+});
+
+pauseFab.addEventListener('click', pauseGame);
+resumeBtn.addEventListener('click', resumeGame);
+
+// The "✕" FAB pauses the game and opens the pause overlay, which itself
+// offers "Terminer la partie" with its own confirmation. This avoids
+// stacking two confirm dialogs and lets the player glance at the state
+// (and un-pause) before committing to ending the game.
+endFab.addEventListener('click', pauseGame);
+
+endGameBtn.addEventListener('click', () => {
+  showConfirm('Terminer la partie en cours ? Les temps ne seront pas conservés.', endGame);
+});
+
+// ---------------------------------------------------------------
+// INIT
+// ---------------------------------------------------------------
+function init() {
+  loadSettings();
+  renderModeOptions();
+  renderTimeSettings();
+  renderPlayersConfig();
+  showScreen('config');
+}
+
+init();
+
+</script>
+</body>
+</html>
