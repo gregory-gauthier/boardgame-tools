@@ -400,14 +400,27 @@ function generatePatron() {
 
     ctx.beginPath();
     if (showTabs) {
-      // Parcours horaire depuis coin haut-gauche de tab_top
+      // Parcours horaire depuis coin haut-gauche de tab_top.
+      //
+      // Forme exacte du patron (avec languettes) :
+      //
+      //  colA  colA+l               colEnd
+      //   +------+                          rowTT   tab_top
+      //   +------+                          rowTop  haut DESSUS
+      //   | DESSUS (l×p)  |
+      //   +------+                          rowMid  haut rangée centrale
+      //          ↑ pas de tab à droite de DESSUS ni au-dessus de AVANT/ARRIÈRE
+      //
+      // La droite du patron au niveau [rowTop..rowMid] est à colA+l (bord droit de DESSUS).
+      // Les tabs latéraux (tab_rtop) sont à [colD..colD+p, rowMid-T..rowMid],
+      // c'est-à-dire EN DESSOUS de rowTop — ils ne dépassent pas vers le haut de DESSUS.
+
       ctx.moveTo(px(colA),    px(rowTT));    // haut-gauche tab_top
       ctx.lineTo(px(colA+l),  px(rowTT));    // haut-droite tab_top
-      ctx.lineTo(px(colA+l),  px(rowTop));   // coin haut-droit DESSUS
-      ctx.lineTo(px(colD+p),  px(rowTop));   // longe le haut de DESSUS vers la droite (pas de tab ici)
-      ctx.lineTo(px(colD+p),  px(rowMid-T)); // descend : haut tab_rtop
-      ctx.lineTo(px(colAr+l), px(rowMid-T)); // longe vers la droite (pas de tab au-dessus ARRIÈRE)
-      ctx.lineTo(px(colAr+l), px(rowMid));   // descend : coin haut-droit ARRIÈRE
+      ctx.lineTo(px(colA+l),  px(rowMid-T)); // descend : niveau haut tab_rtop
+      ctx.lineTo(px(colD+p),  px(rowMid-T)); // longe : bord droit tab_rtop
+      ctx.lineTo(px(colD+p),  px(rowMid));   // descend : rejoint la rangée centrale
+      ctx.lineTo(px(colAr+l), px(rowMid));   // longe : coin haut-droit ARRIÈRE
       ctx.lineTo(px(colEnd),  px(rowMid));   // tab_glue : côté haut
       ctx.lineTo(px(colEnd),  px(rowBot));   // tab_glue : côté droit
       ctx.lineTo(px(colAr+l), px(rowBot));   // coin bas-droit ARRIÈRE
@@ -418,14 +431,13 @@ function generatePatron() {
       ctx.lineTo(px(colA+l),  px(rowTB));    // descend : bas-droit tab_bottom
       ctx.lineTo(px(colA),    px(rowTB));    // bas-gauche tab_bottom
       ctx.lineTo(px(colA),    px(rowBE));    // remonte : coin bas-gauche DESSOUS
-      ctx.lineTo(px(colA),    px(rowBot+T)); // descend à gauche : bas tab_lbot
+      ctx.lineTo(px(colA),    px(rowBot+T)); // descend : bas tab_lbot
       ctx.lineTo(px(colG),    px(rowBot+T)); // gauche tab_lbot
       ctx.lineTo(px(colG),    px(rowBot));   // remonte : coin bas-gauche GAUCHE
       ctx.lineTo(px(colG),    px(rowMid));   // côté gauche du patron (pas de tab à gauche)
       ctx.lineTo(px(colG),    px(rowMid-T)); // monte : haut tab_ltop
       ctx.lineTo(px(colA),    px(rowMid-T)); // longe vers la droite (pas de tab au-dessus AVANT)
-      ctx.lineTo(px(colA),    px(rowTop));   // remonte : coin haut-gauche DESSUS
-      ctx.lineTo(px(colA),    px(rowTT));    // retour départ
+      ctx.lineTo(px(colA),    px(rowTT));    // remonte directement au départ (longe bord gauche DESSUS + tab_top)
     } else {
       ctx.moveTo(px(colA),    px(rowTop));
       ctx.lineTo(px(colA+l),  px(rowTop));
